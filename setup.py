@@ -7,8 +7,10 @@ import sys
 
 try:
     from setuptools import setup
+    from setuptools.command.test import test as original_test
 except ImportError:
     from distutils.core import setup
+    original_test = object
 
 if sys.argv[-1] == 'publish':
     os.system('python setup.py sdist upload')
@@ -16,6 +18,25 @@ if sys.argv[-1] == 'publish':
 
 readme = open('README.rst').read()
 history = open('HISTORY.rst').read().replace('.. :changelog:', '')
+
+
+class test(original_test):
+    description = "Run all tests and checks (customized for this project)"
+
+    def finalize_options(self):
+        # Don't actually run any "test" tests (we will use nosetest)
+        self.test_suit = None
+
+    def run(self):
+        # Call this to do complicated distribute stuff.
+        original_test.run(self)
+
+        for cmd in ['nosetests']:
+            try:
+                self.run_command(cmd)
+            except SystemExit, e:
+                if e.code:
+                    raise
 
 setup(
     name='nbdiff',
@@ -25,6 +46,7 @@ setup(
     author='Tavish Armstrong',
     author_email='tavisharmstrong@gmail.com',
     url='https://github.com/tarmstrong/nbdiff',
+    cmdclass=dict(test=test),
     packages=[
         'nbdiff',
         'nbdiff.server',
@@ -53,6 +75,9 @@ setup(
         'ipython',
         'python-Levenshtein',
 	'python-hglib',
+    ],
+    tests_require=[
+      'nose', 'bitarray', 'pretend', 'testfixtures',
     ],
     license="MIT",
     zip_safe=False,
